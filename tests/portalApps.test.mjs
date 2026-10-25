@@ -33,3 +33,8 @@ test('viewer isolates uploaded scripts from site origin while allowing downloads
   assert.ok(!sandbox.includes('allow-same-origin'));
   assert.ok(!sandbox.includes('allow-top-navigation'));
 });
+
+test('shared apps start empty rather than restoring built-in portal cards', () => {
+  assert.ok(source.includes('new Map<string, CustomPortalApp>()'));
+  assert.ok(!source.includes('DEFAULT_MY_APPS'));
+});

@@ -31,20 +31,7 @@ export const DEFAULT_GALLERY: GalleryPhoto[] = [
   },
 ];
 
-export const DEFAULT_MY_APPS: CustomPortalApp[] = [
-  { id: 'app-1', name: 'India Post Official Portal', category: 'Official Portal', url: 'https://www.indiapost.gov.in', description: 'Central India Post portal for tracking, rules, and circulars' },
-  { id: 'app-2', name: 'Meghdoot / SAP ERP Portal', category: 'Operations', url: 'https://sapep.indiapost.gov.in', description: 'Postal Enterprise Resource Planning and daily operations' },
-  { id: 'app-3', name: 'Dak Karmayogi E-Learning', category: 'Training', url: 'https://dakkarmayogi.gov.in', description: 'Mandatory online training modules for GDS and Postal Assistants' },
-  { id: 'app-4', name: 'CEPT Web Services Hub', category: 'IT & Technology', url: 'https://cept.gov.in', description: 'Centre for Excellence in Postal Technology utilities' },
-  { id: 'app-5', name: 'Finacle Core Banking System (CBS)', category: 'Banking', url: 'https://cbs.indiapost.gov.in', description: 'POSB Core Banking and ATM transaction portal' },
-  { id: 'app-6', name: 'Postal Life Insurance (PLI)', category: 'Insurance', url: 'https://pli.indiapost.gov.in', description: 'PLI and RPLI customer portal and quotation tools' },
-  { id: 'app-7', name: 'Speed Post Tracking Tool', category: 'Tracking', url: 'https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx', description: 'Consignment track and trace service' },
-  { id: 'app-8', name: 'Central Govt Health Scheme (CGHS)', category: 'Medical', url: 'https://cghs.nic.in', description: 'CGHS empanelled hospitals, plastic card and claims' },
-  { id: 'app-9', name: 'Bhavishya Pension Portal', category: 'Pension', url: 'https://bhavishya.nic.in', description: 'Civil servants pension sanction and payment tracking' },
-  { id: 'app-10', name: 'CPENGRAMS Grievance Portal', category: 'Grievance', url: 'https://pgportal.gov.in/pension', description: 'Online pension grievances redressal system' },
-  { id: 'app-11', name: 'Odisha Postal Circle Cuttack', category: 'Circle Office', url: 'https://odishapost.gov.in', description: 'Odisha Circle administrative notifications & transfers' },
-  { id: 'app-12', name: 'NFPE National Confederation', category: 'Union Portal', url: 'http://confederationhq.blogspot.com', description: 'National Federation of Postal Employees updates' },
-];
+export const DEFAULT_MY_APPS: CustomPortalApp[] = [];
 
 export const DEFAULT_EMPLOYEE_RESOURCES: EmployeeResource[] = [
   { id: 'res-1', title: 'Postal Manual Volume IV (Appointments, Promotion, Leave & Discipline)', category: 'Postal Manuals', url: 'https://www.indiapost.gov.in' },

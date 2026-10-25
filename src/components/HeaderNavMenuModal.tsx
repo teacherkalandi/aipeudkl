@@ -66,7 +66,7 @@ export const HeaderNavMenuModal: React.FC<HeaderNavMenuModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setGallery(getStoredGallery());
-      setMyApps(getStoredMyApps());
+      setMyApps([]);
       setEmployeeResources(getStoredEmployeeResources());
       setSubView(initialSubView);
       setSelectedPhoto(null);
@@ -389,7 +389,7 @@ export const HeaderNavMenuModal: React.FC<HeaderNavMenuModalProps> = ({
 
               {filteredApps.length === 0 && (
                 <div className="text-center py-12 text-slate-400 text-xs">
-                  No portal found matching "{appSearch}".
+                  {appSearch ? `No app found matching "${appSearch}".` : 'No apps have been published yet.'}
                 </div>
               )}
             </div>

@@ -1,7 +1,6 @@
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { CustomPortalApp } from '../types';
-import { DEFAULT_MY_APPS } from '../data/portalMenuData';
 
 export const MAX_APP_BYTES = 700 * 1024;
 
@@ -15,7 +14,7 @@ export async function readHtmlApp(file: File): Promise<string> {
 
 export function subscribePortalApps(onChange: (apps: CustomPortalApp[]) => void, onError: (error: Error) => void) {
   return onSnapshot(collection(db, 'portalApps'), snapshot => {
-    const apps = new Map(DEFAULT_MY_APPS.map(app => [app.id, app]));
+    const apps = new Map<string, CustomPortalApp>();
     snapshot.forEach(item => {
       const data = item.data();
       if (data.deleted) apps.delete(item.id);

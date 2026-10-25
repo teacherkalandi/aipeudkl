@@ -294,8 +294,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [galDate, setGalDate] = useState(new Date().toISOString().split('T')[0]);
 
   // ================= 7. MY APPS STATE =================
-  const [myApps, setMyApps] = useState<CustomPortalApp[]>(DEFAULT_MY_APPS);
+  const [myApps, setMyApps] = useState<CustomPortalApp[]>([]);
   const [appName, setAppName] = useState('');
+  const [appSource, setAppSource] = useState<'code' | 'url'>('code');
+  const [appCode, setAppCode] = useState('');
+  const [showAppForm, setShowAppForm] = useState(false);
   const [appFile, setAppFile] = useState<File | null>(null);
   const [appSaving, setAppSaving] = useState(false);
   const [previewApp, setPreviewApp] = useState<CustomPortalApp | null>(null);
@@ -912,19 +915,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     const form = e.currentTarget;
     setAppSaving(true);
     try {
-      if (!appName.trim() || (!appFile && !appUrl.trim())) throw new Error('App name and HTML file or URL are required.');
+      if (!appName.trim() || (appSource === 'code' ? !appCode.trim() : !appUrl.trim())) throw new Error('App name and HTML file or URL are required.');
       const newApp: CustomPortalApp = {
         id: `app-${crypto.randomUUID()}`,
         name: appName.trim(), category: appCategory.trim() || 'Operations',
-        url: appFile ? '' : appUrl.trim(),
+        url: appSource === 'code' ? '' : appUrl.trim(),
         description: appDescription.trim() || 'Postal employee app',
       };
-      if (appFile) {
-        newApp.htmlContent = await readHtmlApp(appFile);
-        newApp.fileName = appFile.name;
+      if (appSource === 'code') {
+        newApp.htmlContent = await readHtmlApp(new File([appCode], appFile?.name || 'app.html', { type: 'text/html' }));
+        newApp.fileName = appFile?.name || 'app.html';
       } else if (!/^https?:\/\//i.test(newApp.url)) throw new Error('Please use an http or https URL.');
       await savePortalApp(newApp);
-      setAppName(''); setAppUrl(''); setAppDescription(''); setAppFile(null);
+      setAppName(''); setAppUrl(''); setAppDescription(''); setAppFile(null); setAppCode(''); setShowAppForm(false);
       form.reset();
       showNotification('✅ App published to My Apps for all visitors!');
     } catch (error) {
@@ -2658,75 +2661,51 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
             {/* TAB CONTENT: MY APPS */}
             {activeTab === 'myApps' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-slate-200/80">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-red-600 pb-3 border-b border-slate-100 mb-6">
-                    ADD HTML APP OR PORTAL
-                  </h2>
-                  {previewApp && <HtmlAppViewer app={previewApp} onClose={() => setPreviewApp(null)} />}
-                  <form onSubmit={handleSaveApp} className="space-y-4">
-                    <fieldset disabled={appSaving} className="contents">
-                    <div>
-                      <label className="text-xs font-bold block mb-2">UPLOAD HTML APP</label>
-                      <input aria-label="Upload HTML app" type="file" accept=".html,.htm,text/html" disabled={appSaving} onChange={e => setAppFile(e.target.files?.[0] || null)} className="w-full text-sm" />
-                      <p className="text-xs text-slate-500 mt-2">Single HTML file, up to 700 KB. Include CSS, JavaScript and images inside the file. External resources need internet.</p>
-                    </div>
-                    <textarea aria-label="App description" placeholder="App description" value={appDescription} onChange={e => setAppDescription(e.target.value)} className="w-full border rounded-xl p-3 text-sm" />
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">
-                        APP / PORTAL NAME *
-                      </label>
-                      <input
-                        type="text"
-                        value={appName}
-                        onChange={(e) => setAppName(e.target.value)}
-                        placeholder="e.g. India Post Central Portal"
-                        required
-                        className="w-full bg-slate-50 border border-slate-200 text-sm px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">
-                        PORTAL URL (OPTIONAL WHEN UPLOADING HTML)
-                      </label>
-                      <input
-                        type="url"
-                        disabled={!!appFile || appSaving}
-                        value={appUrl}
-                        onChange={(e) => setAppUrl(e.target.value)}
-                        placeholder="https://..."
-                        required={!appFile}
-                        className="w-full bg-slate-50 border border-slate-200 text-sm px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">
-                        CATEGORY
-                      </label>
-                      <input
-                        type="text"
-                        value={appCategory}
-                        onChange={(e) => setAppCategory(e.target.value)}
-                        placeholder="e.g. Operations / Banking / Training"
-                        className="w-full bg-slate-50 border border-slate-200 text-sm px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500 outline-none"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-sm text-sm"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>{appSaving ? 'Publishing…' : '+ Publish App'}</span>
-                    </button>
-                    </fieldset>
-                  </form>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div><h2 className="text-xl font-bold text-slate-900">My Apps</h2><p className="text-sm text-slate-500">Manage custom HTML applications</p></div>
+                  <button type="button" onClick={() => setShowAppForm(true)} className="bg-red-600 text-white rounded-2xl px-5 py-3 font-bold">+ Add App</button>
                 </div>
-
+                {previewApp && <HtmlAppViewer app={previewApp} onClose={() => setPreviewApp(null)} />}
+                {showAppForm && <form onSubmit={handleSaveApp} className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-8 space-y-5">
+                  <fieldset disabled={appSaving} className="contents">
+                    <div className="flex justify-between border-b pb-4"><h3 className="font-bold">Add New App</h3><button type="button" aria-label="Close add app" onClick={() => setShowAppForm(false)}>✕</button></div>
+                    <label className="block text-sm font-semibold">App Title
+                      <input required value={appName} onChange={e => setAppName(e.target.value)} placeholder="e.g. Target Calculator" className="mt-2 w-full bg-slate-50 border rounded-xl p-3" />
+                    </label>
+                    <label className="block text-sm font-semibold">Category
+                      <select value={appCategory} onChange={e => setAppCategory(e.target.value)} className="mt-2 w-full bg-slate-50 border rounded-xl p-3">
+                        {['Operations', 'Calculators', 'PDF Tools', 'Banking', 'Training', 'Others'].map(category => <option key={category}>{category}</option>)}
+                      </select>
+                    </label>
+                    <div><p className="text-sm font-semibold mb-2">App Source</p><div className="flex gap-5 text-sm">
+                      <label><input type="radio" name="appSource" checked={appSource === 'code'} onChange={() => setAppSource('code')} /> Code/File</label>
+                      <label><input type="radio" name="appSource" checked={appSource === 'url'} onChange={() => setAppSource('url')} /> Website Link</label>
+                    </div></div>
+                    {appSource === 'code' ? <div>
+                      <div className="flex items-center justify-between mb-2 gap-3"><label htmlFor="app-code" className="text-sm font-semibold">Code Snippet</label>
+                        <label className="cursor-pointer text-sm bg-slate-100 rounded-lg px-3 py-2">Upload File
+                          <input type="file" accept=".html,.htm,text/html" className="sr-only" aria-label="Upload HTML app" onChange={async e => {
+                            const file = e.target.files?.[0]; if (!file) return;
+                            try { const html = await readHtmlApp(file); setAppCode(html); setAppFile(file); }
+                            catch (error) { showNotification(`⚠️ ${error instanceof Error ? error.message : 'Could not read file'}`); }
+                            e.target.value = '';
+                          }} />
+                        </label>
+                      </div>
+                      <textarea id="app-code" required value={appCode} onChange={e => setAppCode(e.target.value)} placeholder="Paste your code here or upload a file..." className="w-full min-h-64 bg-slate-50 border border-red-500 rounded-xl p-4 font-mono text-sm" />
+                      <p className="text-xs text-slate-500 mt-2">{appFile?.name ? `${appFile.name} · ` : ''}Single HTML app, up to 700 KB. Embed local CSS, scripts and images.</p>
+                    </div> : <label className="block text-sm font-semibold">Website Link<input type="url" required value={appUrl} onChange={e => setAppUrl(e.target.value)} placeholder="https://..." className="mt-2 w-full bg-slate-50 border rounded-xl p-3" /></label>}
+                    <label className="block text-sm font-semibold">Description (optional)<input value={appDescription} onChange={e => setAppDescription(e.target.value)} className="mt-2 w-full bg-slate-50 border rounded-xl p-3" /></label>
+                    <div className="border-t pt-4 flex justify-end gap-4"><button type="button" onClick={() => setShowAppForm(false)} className="px-4 py-3 text-slate-500">Cancel</button><button type="submit" className="px-6 py-3 rounded-2xl bg-red-600 text-white font-bold">{appSaving ? 'Saving…' : 'Save App'}</button></div>
+                  </fieldset>
+                </form>}
                 <div className="lg:col-span-7 xl:col-span-8">
                   <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
                     CURRENT APPS ({myApps.length})
                   </div>
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {myApps.length === 0 && <p className="text-sm text-slate-500 py-8 col-span-full">No apps added yet. Click Add App to upload your first HTML application.</p>}
                     {myApps.map((app) => (
                       <div
                         key={app.id}
@@ -2747,7 +2726,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             rel="noopener noreferrer"
                             className="text-red-600 hover:text-red-700 text-xs font-semibold flex items-center gap-1 mt-2 w-fit"
                           >
-                            <span>🔗 Open Portal</span>
+                            <span>{app.htmlContent ? '▶ Open App' : '🔗 Open Website'}</span>
                           </a>
                         </div>
                         <button
