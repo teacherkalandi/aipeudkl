@@ -56,6 +56,17 @@ service cloud.firestore {
       allow delete: if true;
     }
 
+    // Shared HTML apps. Follows this project's existing admin portal write model.
+    match /portalApps/{appId} {
+      allow read: if true;
+      allow create, update: if ((request.resource.data.keys().hasOnly(['deleted']) && request.resource.data.deleted == true) ||
+         (request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+          request.resource.data.category is string && request.resource.data.description is string &&
+          request.resource.data.url is string &&
+          (!('htmlContent' in request.resource.data) ||
+           (request.resource.data.htmlContent is string && request.resource.data.htmlContent.size() <= 716800))));
+    }
+
     // Union Documents & Rulings section (Executive Bearers)
     match /unionDocumentsAndRulings/{docId} {
       allow read: if true;

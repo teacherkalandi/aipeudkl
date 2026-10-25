@@ -118,6 +118,8 @@ export interface GalleryPhoto {
 }
 
 export interface CustomPortalApp {
+  htmlContent?: string;
+  fileName?: string;
   id: string;
   name: string;
   category: string;

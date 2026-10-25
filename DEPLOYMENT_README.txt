@@ -50,3 +50,31 @@ The legacy-peer-deps install setting handles the repository's existing npm peer
 version conflict without changing its application dependency versions.
 
 These files have not been pushed to GitHub or deployed.
+
+MY APPS — HTML UPLOAD
+---------------------
+Deploy the updated website AND publish firestore.rules to the configured Firebase
+project/database. GitHub/Vercel website deployment alone does not publish rules.
+Admin Portal > My Apps: enter an app name, select a self-contained .html/.htm
+file (maximum 700 KB), optionally enter category/description, then Publish App.
+Home menu > My Apps displays shared cards; clicking an HTML app opens the app
+in a full-screen isolated frame. Close App returns to the cards. URL shortcuts
+continue to open separately. Deleting an app removes its card for all visitors.
+Uploads/deletes report database failures rather than claiming success.
+Existing browser-only custom shortcuts are not automatically published.
+
+Compatibility: inline HTML/CSS/JavaScript works; separate local assets must be
+embedded. External resources need internet. The isolated frame intentionally
+cannot access the host website's login/storage, navigate the top-level page,
+or open popups. Apps requiring localStorage, service workers, or directory
+picker APIs require a separately hosted origin rather than this HTML viewer.
+
+Access model: portalApps rules follow this repository's existing unauthenticated
+write model. The current admin login is browser-side only, not Firebase Auth.
+These rules validate data but do not restrict writes to administrators. Before
+using this on a public production site, implement Firebase Auth and restrict
+portalApps writes to verified admin identities. Do not treat the admin password
+screen as database authorization.
+
+Validation: npm run lint; npm run build; node --test tests/portalApps.test.mjs.
+Live Firebase and browser end-to-end upload tests were not performed.

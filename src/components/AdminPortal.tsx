@@ -1,3 +1,5 @@
+import { readHtmlApp, savePortalApp, deletePortalApp, subscribePortalApps } from '../services/portalApps';
+import { HtmlAppViewer } from './HtmlAppViewer';
 import React, { useState, useEffect } from 'react';
 import {
   X,
@@ -115,6 +117,8 @@ interface GalleryPhoto {
 }
 
 interface CustomPortalApp {
+  htmlContent?: string;
+  fileName?: string;
   id: string;
   name: string;
   category: string;
@@ -292,6 +296,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   // ================= 7. MY APPS STATE =================
   const [myApps, setMyApps] = useState<CustomPortalApp[]>(DEFAULT_MY_APPS);
   const [appName, setAppName] = useState('');
+  const [appFile, setAppFile] = useState<File | null>(null);
+  const [appSaving, setAppSaving] = useState(false);
+  const [previewApp, setPreviewApp] = useState<CustomPortalApp | null>(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    return subscribePortalApps(setMyApps, () => showNotification('⚠️ Could not load shared apps. Check Firestore rules and connection.'));
+  }, [isOpen]);
   const [appCategory, setAppCategory] = useState('Operations');
   const [appUrl, setAppUrl] = useState('');
   const [appDescription, setAppDescription] = useState('');
@@ -364,8 +375,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       // Local storage cache for gallery, forms, resources, apps
       const savedGal = localStorage.getItem('aipeu_admin_gallery');
       if (savedGal) setGalleryPhotos(JSON.parse(savedGal));
-      const savedApps = localStorage.getItem('aipeu_admin_apps');
-      if (savedApps) setMyApps(JSON.parse(savedApps));
       const savedForms = localStorage.getItem('aipeu_admin_forms');
       if (savedForms) setFormsList(JSON.parse(savedForms));
       const savedRes = localStorage.getItem('aipeu_admin_resources');
@@ -897,40 +906,38 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   };
 
   // ================= 7. MY APPS HANDLERS =================
-  const handleSaveApp = (e: React.FormEvent) => {
+  const handleSaveApp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!appName.trim() || !appUrl.trim()) {
-      showNotification('⚠️ App Name and URL are required');
-      return;
-    }
-    const newApp: CustomPortalApp = {
-      id: `app-${Date.now()}`,
-      name: appName.trim(),
-      category: appCategory.trim() || 'Operations',
-      url: appUrl.trim(),
-      description: appDescription.trim() || 'Official postal employee quick access portal',
-    };
-    const updated = [...myApps, newApp];
-    setMyApps(updated);
-    localStorage.setItem('aipeu_admin_apps', JSON.stringify(updated));
-    setAppName('');
-    setAppUrl('');
-    setAppDescription('');
-    showNotification('✅ Portal App shortcut added!');
+    if (appSaving) return;
+    const form = e.currentTarget;
+    setAppSaving(true);
+    try {
+      if (!appName.trim() || (!appFile && !appUrl.trim())) throw new Error('App name and HTML file or URL are required.');
+      const newApp: CustomPortalApp = {
+        id: `app-${crypto.randomUUID()}`,
+        name: appName.trim(), category: appCategory.trim() || 'Operations',
+        url: appFile ? '' : appUrl.trim(),
+        description: appDescription.trim() || 'Postal employee app',
+      };
+      if (appFile) {
+        newApp.htmlContent = await readHtmlApp(appFile);
+        newApp.fileName = appFile.name;
+      } else if (!/^https?:\/\//i.test(newApp.url)) throw new Error('Please use an http or https URL.');
+      await savePortalApp(newApp);
+      setAppName(''); setAppUrl(''); setAppDescription(''); setAppFile(null);
+      form.reset();
+      showNotification('✅ App published to My Apps for all visitors!');
+    } catch (error) {
+      showNotification(`⚠️ ${error instanceof Error ? error.message : 'App could not be saved. Please retry.'}`);
+    } finally { setAppSaving(false); }
   };
 
   const handleDeleteApp = (id: string) => {
-    const app = myApps.find((a) => a.id !== id);
-    setDeleteConfirm({
-      isOpen: true,
-      type: 'Portal App Shortcut',
-      id,
-      title: app?.name || 'Selected app',
-      onConfirm: () => {
-        const updated = myApps.filter((a) => a.id !== id);
-        setMyApps(updated);
-        localStorage.setItem('aipeu_admin_apps', JSON.stringify(updated));
-        showNotification('✅ App shortcut removed.');
+    const app = myApps.find(a => a.id === id);
+    setDeleteConfirm({ isOpen: true, type: 'App', id, title: app?.name || 'Selected app',
+      onConfirm: async () => {
+        try { await deletePortalApp(id); showNotification('✅ App removed.'); }
+        catch { showNotification('⚠️ Could not remove app. Please retry.'); }
       },
     });
   };
@@ -1529,7 +1536,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 {activeTab === 'notices' && 'MANAGE NOTICE BOARD, CGHS & PENSION CIRCULARS.'}
                 {activeTab === 'announcements' && 'UPDATE HOMEPAGE SCROLLING TICKER & FLASHES.'}
                 {activeTab === 'gallery' && 'UPLOAD EVENT PHOTOS FOR UNION ARCHIVE.'}
-                {activeTab === 'myApps' && 'MANAGE 15 QUICK ACCESS SERVICE PORTALS.'}
+                {activeTab === 'myApps' && 'UPLOAD HTML APPS AND MANAGE SERVICE PORTALS.'}
                 {activeTab === 'forms' && 'MANAGE DOWNLOADABLE EXAM & SERVICE FORMS.'}
                 {activeTab === 'employeeSite' && 'MANAGE POSTAL MANUALS & CS REGULATIONS.'}
                 {activeTab === 'news' && 'MANAGE REAL-TIME BREAKING NEWS HEADLINES.'}
@@ -2227,7 +2234,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         value={docUrl}
                         onChange={(e) => setDocUrl(e.target.value)}
                         placeholder="https://..."
-                        required
+                        required={!appFile}
                         className="w-full bg-slate-50 border border-slate-200 text-sm px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500 outline-none"
                       />
                     </div>
@@ -2357,7 +2364,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         value={noticeUrl}
                         onChange={(e) => setNoticeUrl(e.target.value)}
                         placeholder="https://..."
-                        required
+                        required={!appFile}
                         className="w-full bg-slate-50 border border-slate-200 text-sm px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500 outline-none"
                       />
                     </div>
@@ -2563,7 +2570,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         value={galUrl}
                         onChange={(e) => setGalUrl(e.target.value)}
                         placeholder="https://..."
-                        required
+                        required={!appFile}
                         className="w-full bg-slate-50 border border-slate-200 text-sm px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500 outline-none"
                       />
                     </div>
@@ -2654,9 +2661,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-slate-200/80">
                   <h2 className="text-xs font-bold uppercase tracking-wider text-red-600 pb-3 border-b border-slate-100 mb-6">
-                    ADD QUICK APP SHORTCUT
+                    ADD HTML APP OR PORTAL
                   </h2>
+                  {previewApp && <HtmlAppViewer app={previewApp} onClose={() => setPreviewApp(null)} />}
                   <form onSubmit={handleSaveApp} className="space-y-4">
+                    <fieldset disabled={appSaving} className="contents">
+                    <div>
+                      <label className="text-xs font-bold block mb-2">UPLOAD HTML APP</label>
+                      <input aria-label="Upload HTML app" type="file" accept=".html,.htm,text/html" disabled={appSaving} onChange={e => setAppFile(e.target.files?.[0] || null)} className="w-full text-sm" />
+                      <p className="text-xs text-slate-500 mt-2">Single HTML file, up to 700 KB. Include CSS, JavaScript and images inside the file. External resources need internet.</p>
+                    </div>
+                    <textarea aria-label="App description" placeholder="App description" value={appDescription} onChange={e => setAppDescription(e.target.value)} className="w-full border rounded-xl p-3 text-sm" />
                     <div>
                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">
                         APP / PORTAL NAME *
@@ -2672,14 +2687,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     </div>
                     <div>
                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">
-                        PORTAL URL *
+                        PORTAL URL (OPTIONAL WHEN UPLOADING HTML)
                       </label>
                       <input
                         type="url"
+                        disabled={!!appFile || appSaving}
                         value={appUrl}
                         onChange={(e) => setAppUrl(e.target.value)}
                         placeholder="https://..."
-                        required
+                        required={!appFile}
                         className="w-full bg-slate-50 border border-slate-200 text-sm px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500 outline-none"
                       />
                     </div>
@@ -2700,8 +2716,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                       className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-sm text-sm"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>+ Add App</span>
+                      <span>{appSaving ? 'Publishing…' : '+ Publish App'}</span>
                     </button>
+                    </fieldset>
                   </form>
                 </div>
 
@@ -2724,7 +2741,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           </h3>
                           <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{app.description}</p>
                           <a
-                            href={app.url}
+                            href={app.htmlContent ? undefined : app.url}
+                            onClick={app.htmlContent ? () => setPreviewApp(app) : undefined}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-red-600 hover:text-red-700 text-xs font-semibold flex items-center gap-1 mt-2 w-fit"
@@ -2795,7 +2813,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         value={formDownloadUrl}
                         onChange={(e) => setFormDownloadUrl(e.target.value)}
                         placeholder="https://..."
-                        required
+                        required={!appFile}
                         className="w-full bg-slate-50 border border-slate-200 text-sm px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500 outline-none"
                       />
                     </div>
@@ -2913,7 +2931,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         value={resUrl}
                         onChange={(e) => setResUrl(e.target.value)}
                         placeholder="https://..."
-                        required
+                        required={!appFile}
                         className="w-full bg-slate-50 border border-slate-200 text-sm px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500 outline-none"
                       />
                     </div>

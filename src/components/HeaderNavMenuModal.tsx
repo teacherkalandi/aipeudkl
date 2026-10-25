@@ -1,3 +1,5 @@
+import { subscribePortalApps } from '../services/portalApps';
+import { HtmlAppViewer } from './HtmlAppViewer';
 import React, { useState, useEffect } from 'react';
 import {
   X,
@@ -49,6 +51,14 @@ export const HeaderNavMenuModal: React.FC<HeaderNavMenuModalProps> = ({
   const [selectedPhoto, setSelectedPhoto] = useState<GalleryPhoto | null>(null);
 
   // Search & filters
+  const [selectedApp, setSelectedApp] = useState<CustomPortalApp | null>(null);
+  const [appsError, setAppsError] = useState('');
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedApp(null);
+    setAppsError('');
+    return subscribePortalApps(apps => { setMyApps(apps); setAppsError(''); }, () => setAppsError('Shared apps could not be loaded. Please check your connection and try again.'));
+  }, [isOpen]);
   const [appSearch, setAppSearch] = useState('');
   const [resSearch, setResSearch] = useState('');
   const [galleryCat, setGalleryCat] = useState<string>('all');
@@ -342,12 +352,18 @@ export const HeaderNavMenuModal: React.FC<HeaderNavMenuModalProps> = ({
                 />
               </div>
 
+              {appsError && <p role="alert" className="text-sm text-red-600">{appsError}</p>}
+              {selectedApp && <HtmlAppViewer app={selectedApp} onClose={() => setSelectedApp(null)} />}
               {/* Apps List */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {filteredApps.map((app) => (
                   <a
                     key={app.id}
-                    href={app.url}
+                    href={app.htmlContent ? undefined : app.url}
+                    role={app.htmlContent ? "button" : undefined}
+                    tabIndex={app.htmlContent ? 0 : undefined}
+                    onClick={app.htmlContent ? () => setSelectedApp(app) : undefined}
+                    onKeyDown={app.htmlContent ? e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedApp(app); } } : undefined}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md transition-all flex items-start justify-between gap-3 group active:scale-[0.99]"
