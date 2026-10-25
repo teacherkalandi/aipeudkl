@@ -1,0 +1,6 @@
+{
+  "name": "AIPEU Dhenkanal Mobile",
+  "description": "NFPE AIPEU Unions AIGDSU AIPRPA AIPCPCCWF - Dhenkanal Division. Read circulars, orders, and union updates offline with push notifications and social sharing. Contact: aipeup3dhenkanaldivn@gmail.com, Mob - 9861184651.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
